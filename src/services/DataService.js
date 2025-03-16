@@ -196,5 +196,75 @@ export const DataService = {
       console.error("Критична помилка з'єднання:", err);
       return { connected: false, error: err.message };
     }
-  }
+  },
+
+  // Додайте ці методи до класу DataService у файлі src/services/DataService.js
+
+  // Створення нового користувача
+  async createUser(userData) {
+    const { email, password, role, full_name, phone } = userData;
+    
+    // 1. Створюємо користувача через Auth API
+    const authResult = await this.executeQuery(
+      async () => {
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              role,
+              full_name
+            }
+          }
+        });
+        return { data, error };
+      },
+      'Помилка створення автентифікації користувача'
+    );
+    
+    // 2. Створюємо запис у таблиці users
+    const userResult = await this.executeQuery(
+      () => supabase.from('users').insert([{
+        id: authResult.user.id,
+        email,
+        role,
+        full_name,
+        phone: phone || null
+      }]).select(),
+      'Помилка створення запису користувача'
+    );
+    
+    return userResult[0];
+  },
+  
+  // Видалення користувача
+  async deleteUser(userId) {
+    return this.executeQuery(
+      () => supabase.from('users').delete().eq('id', userId),
+      'Помилка видалення користувача'
+    );
+  },
+  
+  // Оновлення користувача
+  async updateUserRole(userId, role) {
+    const result = await this.executeQuery(
+      () => supabase.from('users')
+        .update({ role })
+        .eq('id', userId)
+        .select(),
+      'Помилка оновлення ролі користувача'
+    );
+    return result[0];
+  },
+  
+  // Отримання користувача за Email
+  async getUserByEmail(email) {
+    return this.executeQuery(
+      () => supabase.from('users')
+        .select('*')
+        .eq('email', email)
+        .single(),
+      'Помилка пошуку користувача'
+    );
+  },
 };
