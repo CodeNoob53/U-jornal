@@ -5,101 +5,104 @@ const AuthContext = createContext({});
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [userRole, setUserRole] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Функція для отримання ролі користувача
-  const fetchUserRole = async (userId) => {
-    try {
-      // Використовуємо запит без .single() для уникнення помилок
-      const { data, error } = await supabase
-        .from('users')
-        .select('role')
-        .eq('id', userId);
-      
-      if (error) {
-        console.error('Error fetching user role:', error);
-        setError(`Помилка отримання ролі: ${error.message}`);
-        return null;
-      }
-      
-      // Перевіряємо, чи є дані
-      if (data && data.length > 0) {
-        return data[0].role;
-      } else {
-        console.warn('User record not found in users table');
-        return null;
-      }
-    } catch (error) {
-      console.error('Supabase error:', error);
-      setError(`Неочікувана помилка: ${error.message}`);
-      return null;
+  // Синхронізувати стан користувача з локальним сховищем для стійкості
+  const updateUserState = (currentUser) => {
+    setUser(currentUser);
+    if (currentUser) {
+      // Зберігаємо базові дані для резервного відновлення
+      localStorage.setItem('user_email', currentUser.email);
+      localStorage.setItem('last_login', new Date().toISOString());
+    } else {
+      localStorage.removeItem('user_email');
+      localStorage.removeItem('last_login');
     }
   };
 
+  // Ініціалізація сесії і підписка на зміни
   useEffect(() => {
-    // Check active sessions and sets the user
-    const initSession = async () => {
+    console.log("Initializing auth context");
+
+    const initAuth = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        const currentUser = session?.user || null;
-        setUser(currentUser);
+        setLoading(true);
         
-        // Отримуємо роль, якщо користувач авторизований
-        if (currentUser) {
-          const role = await fetchUserRole(currentUser.id);
-          setUserRole(role);
+        // Отримуємо сесію
+        const { data } = await supabase.auth.getSession();
+        const { session } = data;
+        
+        if (session) {
+          console.log("Found existing session");
+          const { user: currentUser } = session;
+          updateUserState(currentUser);
+        } else {
+          console.log("No active session found");
+          updateUserState(null);
         }
       } catch (err) {
-        console.error('Session initialization error:', err);
-        setError(`Помилка ініціалізації сесії: ${err.message}`);
+        console.error("Error initializing session:", err);
+        setError(err.message);
+        updateUserState(null);
       } finally {
         setLoading(false);
       }
     };
 
-    initSession();
+    // Спочатку завантажуємо сесію
+    initAuth();
 
-    // Listen for changes on auth state
+    // Далі підписуємося на зміни стану
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      async (event, session) => {
+        console.log("Auth state changed:", event);
+        
         try {
-          const currentUser = session?.user || null;
-          setUser(currentUser);
-          
-          // Отримуємо роль, якщо користувач авторизований
-          if (currentUser) {
-            const role = await fetchUserRole(currentUser.id);
-            setUserRole(role);
-          } else {
-            setUserRole(null);
+          if (event === 'SIGNED_IN' && session) {
+            updateUserState(session.user);
+          }
+          else if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+            updateUserState(null);
+          }
+          else if (session?.user) {
+            updateUserState(session.user);
           }
         } catch (err) {
-          console.error('Auth state change error:', err);
-          setError(`Помилка при зміні стану авторизації: ${err.message}`);
+          console.error("Error handling auth change:", err);
+          setError(err.message);
         } finally {
           setLoading(false);
         }
       }
     );
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   const value = {
     signUp: (data) => supabase.auth.signUp(data),
     signIn: (data) => supabase.auth.signInWithPassword(data),
-    signOut: () => supabase.auth.signOut(),
+    signOut: async () => {
+      try {
+        updateUserState(null);
+        return await supabase.auth.signOut();
+      } catch (err) {
+        console.error("Error signing out:", err);
+        throw err;
+      }
+    },
     user,
-    userRole,
+    loading,
     error,
-    fetchUserRole
+    isAuthenticated: !!user
   };
 
   return (
     <AuthContext.Provider value={value}>
-      {!loading && children}
+      {children}
     </AuthContext.Provider>
   );
 }
