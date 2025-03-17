@@ -1,10 +1,13 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { DataService } from '../services/DataService';
 
 const AuthContext = createContext({});
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
+  const [userRole, setUserRole] = useState(null);
+  const [extendedRoles, setExtendedRoles] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -15,9 +18,46 @@ export function AuthProvider({ children }) {
       // Зберігаємо базові дані для резервного відновлення
       localStorage.setItem('user_email', currentUser.email);
       localStorage.setItem('last_login', new Date().toISOString());
+      
+      // Отримуємо роль користувача з бази даних
+      fetchUserRole(currentUser.id);
     } else {
       localStorage.removeItem('user_email');
       localStorage.removeItem('last_login');
+      setUserRole(null);
+      setExtendedRoles(null);
+    }
+  };
+  
+  // Отримання ролі користувача з таблиці users та розширених ролей
+  const fetchUserRole = async (userId) => {
+    try {
+      // Отримуємо базову роль користувача
+      const { data, error } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', userId)
+        .single();
+        
+      if (error) {
+        console.error('Помилка отримання ролі користувача:', error);
+        return;
+      }
+      
+      console.log('Отримана роль користувача:', data?.role);
+      setUserRole(data?.role);
+      
+      // Отримуємо розширені ролі користувача
+      try {
+        const extendedRolesData = await DataService.getUserExtendedRoles(userId);
+        console.log('Отримані розширені ролі:', extendedRolesData);
+        setExtendedRoles(extendedRolesData);
+      } catch (err) {
+        console.error('Помилка отримання розширених ролей:', err);
+        setExtendedRoles(null);
+      }
+    } catch (err) {
+      console.error('Критична помилка отримання ролі:', err);
     }
   };
 
@@ -82,6 +122,13 @@ export function AuthProvider({ children }) {
     };
   }, []);
 
+  // Визначає функції для перевірки розширених ролей
+  const isCurator = () => extendedRoles?.is_curator || false;
+  const isDean = () => extendedRoles?.is_dean || false;
+  const isViceDean = () => extendedRoles?.is_vice_dean || false;
+  const isGroupLeader = () => extendedRoles?.is_group_leader || false;
+  const hasFacultyAccess = () => isDean() || isViceDean();
+
   const value = {
     signUp: (data) => supabase.auth.signUp(data),
     signIn: (data) => supabase.auth.signInWithPassword(data),
@@ -95,6 +142,15 @@ export function AuthProvider({ children }) {
       }
     },
     user,
+    userRole,
+    extendedRoles,
+    isCurator,
+    isDean,
+    isViceDean,
+    isGroupLeader,
+    hasFacultyAccess,
+    getCuratorGroupId: () => extendedRoles?.group_id || null,
+    getFacultyId: () => extendedRoles?.faculty_id || null,
     loading,
     error,
     isAuthenticated: !!user

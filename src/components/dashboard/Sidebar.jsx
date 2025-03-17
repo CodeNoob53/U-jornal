@@ -8,21 +8,28 @@ import {
   Calendar,
   BarChart2,
   LogOut,
-  Building
+  Building,
+  FileText,
+  BarChart
 } from 'lucide-react';
 
-export function Sidebar({ activeSection, setActiveSection, userRole, user }) {
+export function Sidebar({ activeSection, setActiveSection, userRole, user, menuItems }) {
   const { signOut } = useAuth();
   const navigate = useNavigate();
 
-  const menuItems = [
+  // Використовуємо menuItems з пропсів, або дефолтний список, якщо menuItems не передано
+  const defaultMenuItems = [
     { id: 'overview', icon: BarChart2, label: 'Огляд' },
     { id: 'users', icon: Users, label: 'Користувачі', adminOnly: true },
     { id: 'faculties', icon: GraduationCap, label: 'Факультети', adminOnly: true },
     { id: 'departments', icon: Building, label: 'Кафедри', adminOnly: true },
     { id: 'subjects', icon: BookOpen, label: 'Предмети' },
-    { id: 'attendance', icon: Calendar, label: 'Відвідуваність' },
+    { id: 'journal', icon: FileText, label: 'Журнал' },
+    { id: 'attendance', icon: Calendar, label: 'Журнал відвідування' },
+    { id: 'attendance-reports', icon: BarChart, label: 'Звіти відвідувань' },
   ];
+
+  const itemsToRender = menuItems || defaultMenuItems;
 
   const handleSignOut = async () => {
     try {
@@ -40,13 +47,17 @@ export function Sidebar({ activeSection, setActiveSection, userRole, user }) {
           {userRole === 'admin' ? 'Адміністратор' : 
            userRole === 'teacher' ? 'Викладач' :
            userRole === 'student' ? 'Студент' : 
-           userRole === 'parent' ? 'Батьки' : 'Користувач'}
+           userRole === 'parent' ? 'Батьки' : 
+           userRole === 'curator' ? 'Куратор' :
+           userRole === 'dean' ? 'Декан' :
+           userRole === 'vice_dean' ? 'Заступник декана' :
+           userRole === 'group_leader' ? 'Староста' : 'Користувач'}
         </h2>
         <p className="text-sm text-gray-600">{user?.email}</p>
       </div>
       
       <nav className="mt-6">
-        {menuItems.map((item) => {
+        {itemsToRender.map((item) => {
           if (item.adminOnly && userRole !== 'admin') return null;
           
           return (

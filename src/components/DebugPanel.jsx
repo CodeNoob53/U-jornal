@@ -40,12 +40,15 @@ function DebugPanel() {
     getUserRole();
   }, [user]);
   
-  // Якщо немає користувача або роль не адміністратор, не відображаємо панель
-  if (!user || (userRole !== null && userRole !== 'admin')) {
-    return null;
-  }
+  // Додаємо логування для відстеження значень
+  useEffect(() => {
+    console.log("DebugPanel render - state:", { user, userRole });
+  }, [user, userRole]);
   
-  // Якщо роль ще не визначена, відображаємо панель без функціональності
+  // Якщо немає користувача або роль не адміністратор, не відображаємо панель
+  if (!user) return null;
+  
+  // Якщо роль ще не визначена, показуємо індикатор завантаження
   if (userRole === null) {
     return (
       <div className="fixed bottom-4 right-4 z-50">
@@ -55,6 +58,9 @@ function DebugPanel() {
       </div>
     );
   }
+  
+  // Перевіряємо, чи є користувач адміністратором
+  if (userRole !== 'admin') return null;
   
   const runConnectionTest = async () => {
     setLoading(true);

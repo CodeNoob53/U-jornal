@@ -10,9 +10,10 @@ import { UsersSection } from '../components/dashboard/UsersSection';
 import { FacultiesSection } from '../components/dashboard/FacultiesSection';
 import { DepartmentsSection } from '../components/dashboard/DepartmentsSection';
 import { SubjectsSection } from '../components/dashboard/SubjectsSection';
-import { AttendanceSection } from '../components/dashboard/AttendanceSection';
-import { JournalSection } from '../components/dashboard/JournalSection'; // <-- new import
-import { BarChart2, GraduationCap, Building, BookOpen, FileText, Calendar, Users } from 'lucide-react'; // <-- add missing icon imports
+import { AttendanceJournalSection } from '../components/dashboard/AttendanceJournalSection'; // Змінено
+import { JournalSection } from '../components/dashboard/JournalSection';
+import { AttendanceReportSection } from '../components/dashboard/AttendanceReportSection'; // Новий імпорт
+import { BarChart2, GraduationCap, Building, BookOpen, FileText, Calendar, Users, BarChart } from 'lucide-react'; // Додано BarChart
 
 function Dashboard() {
   const [activeSection, setActiveSection] = useState('overview');
@@ -59,15 +60,16 @@ function Dashboard() {
     getUserRole();
   }, [user, navigate]);
 
-  // Оновлений список меню з доданим "Журнал"
+  // Оновлений список меню з доданим "Журнал" та "Звіти відвідуваності"
   const menuItems = [
     { id: 'overview', icon: BarChart2, label: 'Огляд' },
     { id: 'users', icon: Users, label: 'Користувачі', adminOnly: true },
     { id: 'faculties', icon: GraduationCap, label: 'Факультети', adminOnly: true },
     { id: 'departments', icon: Building, label: 'Кафедри', adminOnly: true },
     { id: 'subjects', icon: BookOpen, label: 'Предмети' },
-    { id: 'journal', icon: FileText, label: 'Журнал' }, // <-- new menu item
-    { id: 'attendance', icon: Calendar, label: 'Відвідуваність' },
+    { id: 'journal', icon: FileText, label: 'Журнал' },
+    { id: 'attendance', icon: Calendar, label: 'Журнал відвідування' }, // Змінено назву
+    { id: 'attendance-reports', icon: BarChart, label: 'Звіти відвідувань' }, // Новий пункт меню
   ];
 
   // Налаштування компонента в залежності від активної секції
@@ -87,10 +89,12 @@ function Dashboard() {
         return userRole === 'admin' ? <DepartmentsSection /> : null;
       case 'subjects':
         return <SubjectsSection userRole={userRole} />;
-      case 'journal': // <-- new case for journal
+      case 'journal':
         return <JournalSection />;
       case 'attendance':
-        return <AttendanceSection />;
+        return <AttendanceJournalSection />; // Змінено на новий компонент
+      case 'attendance-reports':
+        return <AttendanceReportSection />; // Додано новий case
       default:
         return <OverviewSection stats={stats} />;
     }
@@ -103,7 +107,8 @@ function Dashboard() {
         activeSection={activeSection} 
         setActiveSection={setActiveSection} 
         userRole={userRole} 
-        user={user} 
+        user={user}
+        menuItems={menuItems} // Передаємо menuItems до Sidebar
       />
 
       {/* Основний вміст */}
