@@ -22,10 +22,22 @@ export const DataService = {
     }
   },
 
-  // Користувачі
+  // Отримання списку користувачів
   async getUsers() {
     return this.executeQuery(
-      () => supabase.from('users').select('*').order('full_name'),
+      () => supabase
+        .from('users')
+        .select(`
+          id, 
+          email, 
+          role, 
+          last_name,
+          first_name, 
+          middle_name, 
+          phone,
+          birth_date
+        `)
+        .order('last_name'),
       'Помилка отримання користувачів'
     );
   },
@@ -171,10 +183,23 @@ export const DataService = {
   
   // Оновлення даних користувача
   async updateUser(userId, userData) {
+    const { last_name, first_name, middle_name, phone, birth_date } = userData;
+    
     const result = await this.executeQuery(
-      () => supabase.from('users').update(userData).eq('id', userId).select(),
-      'Помилка оновлення користувача'
+      () => supabase
+        .from('users')
+        .update({ 
+          last_name, 
+          first_name, 
+          middle_name, 
+          phone,
+          birth_date: birth_date || null 
+        })
+        .eq('id', userId)
+        .select(),
+      'Помилка оновлення користувача'  
     );
+    
     return result[0];
   },
   
@@ -202,8 +227,8 @@ export const DataService = {
 
   // Створення нового користувача
   async createUser(userData) {
-    const { email, password, role, full_name, phone } = userData;
-    
+    const { email, password, role, last_name, first_name, middle_name, phone, birth_date } = userData;
+
     // 1. Створюємо користувача через Auth API
     const authResult = await this.executeQuery(
       async () => {
@@ -211,29 +236,29 @@ export const DataService = {
           email,
           password,
           options: {
-            data: {
-              role,
-              full_name
-            }
+            data: { role }
           }
         });
         return { data, error };
       },
       'Помилка створення автентифікації користувача'
     );
-    
+
     // 2. Створюємо запис у таблиці users
     const userResult = await this.executeQuery(
       () => supabase.from('users').insert([{
         id: authResult.user.id,
         email,
         role,
-        full_name,
-        phone: phone || null
+        last_name,
+        first_name, 
+        middle_name,
+        phone: phone || null,
+        birth_date: birth_date || null
       }]).select(),
       'Помилка створення запису користувача'
     );
-    
+
     return userResult[0];
   },
   

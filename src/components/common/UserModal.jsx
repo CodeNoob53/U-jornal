@@ -7,9 +7,12 @@ export function UserModal({ isOpen, onClose, onUserAdded }) {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
-    full_name: '',
+    last_name: '',
+    first_name: '',
+    middle_name: '',
     role: 'student',
-    phone: ''
+    phone: '',
+    birth_date: ''
   });
   
   const [error, setError] = useState('');
@@ -31,43 +34,32 @@ export function UserModal({ isOpen, onClose, onUserAdded }) {
     setIsSubmitting(true);
     
     try {
-      // 1. Створюємо користувача в auth.users через Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+      const userData = {
         email: formData.email,
         password: formData.password,
-        options: {
-          data: {
-            role: formData.role,
-            full_name: formData.full_name
-          }
-        }
-      });
+        role: formData.role,
+        last_name: formData.last_name,
+        first_name: formData.first_name,
+        middle_name: formData.middle_name,
+        phone: formData.phone || null,
+        birth_date: formData.birth_date || null
+      };
+
+      // Create user using DataService
+      await DataService.createUser(userData);
       
-      if (authError) throw authError;
-      
-      // 2. Створюємо запис в таблиці users
-      const { error: userError } = await supabase
-        .from('users')
-        .insert([{
-          id: authData.user.id,
-          role: formData.role,
-          full_name: formData.full_name,
-          email: formData.email,
-          phone: formData.phone || null
-        }]);
-        
-      if (userError) throw userError;
-      
-      // 3. Очищаємо форму і закриваємо модальне вікно
+      // Reset form
       setFormData({
         email: '',
         password: '',
-        full_name: '',
+        last_name: '',
+        first_name: '',
+        middle_name: '',
         role: 'student',
-        phone: ''
+        phone: '',
+        birth_date: ''
       });
       
-      // 4. Сповіщаємо батьківський компонент про успішне додавання користувача
       if (onUserAdded) {
         await onUserAdded();
       }
@@ -103,15 +95,55 @@ export function UserModal({ isOpen, onClose, onUserAdded }) {
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Повне ім'я
+                Прізвище
               </label>
               <input
                 type="text"
-                name="full_name"
-                value={formData.full_name}
+                name="last_name"
+                value={formData.last_name}
                 onChange={handleChange}
                 className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Ім'я
+              </label>
+              <input
+                type="text"
+                name="first_name"
+                value={formData.first_name}
+                onChange={handleChange}
+                className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                По батькові
+              </label>
+              <input
+                type="text"
+                name="middle_name"
+                value={formData.middle_name}
+                onChange={handleChange}
+                className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Дата народження
+              </label>
+              <input
+                type="date"
+                name="birth_date"
+                value={formData.birth_date}
+                onChange={handleChange}
+                className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
             

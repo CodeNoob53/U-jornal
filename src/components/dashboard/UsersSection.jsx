@@ -142,7 +142,7 @@ export function UsersSection() {
                 users.map((user) => (
                   <tr key={user.id} className={deleteConfirm && deleteConfirm.id === user.id ? 'bg-red-50' : ''}>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      {user.full_name}
+                      {`${user.last_name} ${user.first_name} ${user.middle_name || ''}`}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {user.email}

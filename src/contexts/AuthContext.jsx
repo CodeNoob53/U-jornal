@@ -50,6 +50,14 @@ export function AuthProvider({ children }) {
       // Отримуємо розширені ролі користувача
       try {
         const extendedRolesData = await DataService.getUserExtendedRoles(userId);
+        
+        // Додаємо перевірку наявності даних
+        if (!extendedRolesData) {
+          console.warn('Користувач не має розширених ролей');
+          setExtendedRoles(null);
+          return;
+        }
+        
         console.log('Отримані розширені ролі:', extendedRolesData);
         setExtendedRoles(extendedRolesData);
       } catch (err) {
