@@ -31,13 +31,13 @@ export const DataService = {
           id, 
           email, 
           role, 
-          last_name,
+          surname,     // Змінено з last_name на surname
           first_name, 
           middle_name, 
           phone,
           birth_date
         `)
-        .order('last_name'),
+        .order('surname'),    // Змінено з last_name на surname
       'Помилка отримання користувачів'
     );
   },
@@ -295,19 +295,64 @@ export const DataService = {
 
   // Отримання додаткових ролей користувача
   async getUserExtendedRoles(userId) {
-    return this.executeQuery(
-      () => supabase
+    try {
+      console.log("Запит розширених ролей для користувача:", userId);
+      
+      // Спочатку спробуємо простий запит без зв'язків
+      const { data: basicData, error: basicError } = await supabase
         .from('user_roles_extended')
-        .select(`
-          *,
-          faculty:faculties(*),
-          department:departments(*),
-          group:student_groups(*)
-        `)
+        .select('*')
         .eq('user_id', userId)
-        .single(),
-      'Помилка отримання розширених ролей користувача'
-    );
+        .maybeSingle();
+        
+      if (basicError) {
+        console.error("Помилка отримання базових даних:", basicError);
+        throw basicError;
+      }
+      
+      if (!basicData) {
+        console.log("Розширені ролі не знайдені");
+        return null;
+      }
+      
+      // Якщо успішно отримали базові дані, додаємо зв'язані об'єкти
+      const extendedData = { ...basicData };
+      
+      if (basicData.faculty_id) {
+        const { data: facultyData } = await supabase
+          .from('faculties')
+          .select('*')
+          .eq('id', basicData.faculty_id)
+          .single();
+          
+        extendedData.faculty = facultyData || null;
+      }
+      
+      if (basicData.department_id) {
+        const { data: deptData } = await supabase
+          .from('departments')
+          .select('*')
+          .eq('id', basicData.department_id)
+          .single();
+          
+        extendedData.department = deptData || null;
+      }
+      
+      if (basicData.group_id) {
+        const { data: groupData } = await supabase
+          .from('student_groups')
+          .select('*')
+          .eq('id', basicData.group_id)
+          .single();
+          
+        extendedData.group = groupData || null;
+      }
+      
+      return extendedData;
+    } catch (error) {
+      console.error("Помилка отримання розширених ролей:", error);
+      return null;
+    }
   },
 
   // Призначення додаткової ролі користувачу
@@ -341,6 +386,26 @@ export const DataService = {
         'Помилка призначення ролі користувачу'
       );
     }
+  },
+
+  // Створення початкового запису розширених ролей для нового користувача
+  async createInitialUserRoles(userId) {
+    return this.executeQuery(
+      () => supabase
+        .from('user_roles_extended')
+        .insert([{ 
+          user_id: userId,
+          is_dean: false,
+          is_vice_dean: false,
+          is_curator: false,
+          is_group_leader: false,
+          faculty_id: null,
+          department_id: null,
+          group_id: null
+        }])
+        .select(),
+      'Помилка створення початкових розширених ролей'
+    );
   },
 
   // Отримання журналу відвідування для групи і предмета
