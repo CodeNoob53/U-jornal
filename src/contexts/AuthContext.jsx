@@ -47,41 +47,20 @@ export function AuthProvider({ children }) {
       console.log('Отримана роль користувача:', data?.role);
       setUserRole(data?.role);
       
-      // Пропускаємо отримання розширених ролей, якщо вони викликають помилку
-      try {
-        const extendedRolesData = await DataService.getUserExtendedRoles(userId);
-        
-        if (!extendedRolesData) {
-          console.warn('Користувач не має розширених ролей');
-          setExtendedRoles(null);
-          
-          // Встановлюємо заглушки для ролей
-          if (data?.role === 'admin') {
-            setExtendedRoles({
-              is_curator: false,
-              is_dean: false,
-              is_vice_dean: false,
-              is_group_leader: false
-            });
-          }
-          return;
-        }
-        
-        console.log('Отримані розширені ролі:', extendedRolesData);
-        setExtendedRoles(extendedRolesData);
-      } catch (err) {
-        console.error('Помилка отримання розширених ролей:', err);
+      // Встановлюємо порожній об'єкт для розширених ролей
+      // або базовий об'єкт з порожніми значеннями для адміна
+      if (data?.role === 'admin') {
+        setExtendedRoles({
+          is_curator: false,
+          is_dean: false,
+          is_vice_dean: false,
+          is_group_leader: false,
+          faculty_id: null,
+          department_id: null,
+          group_id: null
+        });
+      } else {
         setExtendedRoles(null);
-        
-        // Встановлюємо заглушки для ролей у випадку помилки
-        if (data?.role === 'admin') {
-          setExtendedRoles({
-            is_curator: false,
-            is_dean: false,
-            is_vice_dean: false,
-            is_group_leader: false
-          });
-        }
       }
     } catch (err) {
       console.error('Критична помилка отримання ролі:', err);

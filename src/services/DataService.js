@@ -31,13 +31,13 @@ export const DataService = {
           id, 
           email, 
           role, 
-          surname,     // Змінено з last_name на surname
+          surname,     
           first_name, 
           middle_name, 
           phone,
           birth_date
         `)
-        .order('surname'),    // Змінено з last_name на surname
+        .order('surname'),    
       'Помилка отримання користувачів'
     );
   },
@@ -295,66 +295,25 @@ export const DataService = {
 
   // Отримання додаткових ролей користувача
   async getUserExtendedRoles(userId) {
-    try {
-      console.log("Запит розширених ролей для користувача:", userId);
-      
-      // Спочатку спробуємо простий запит без зв'язків
-      const { data: basicData, error: basicError } = await supabase
-        .from('user_roles_extended')
-        .select('*')
-        .eq('user_id', userId)
-        .maybeSingle();
-        
-      if (basicError) {
-        console.error("Помилка отримання базових даних:", basicError);
-        throw basicError;
-      }
-      
-      if (!basicData) {
-        console.log("Розширені ролі не знайдені");
-        return null;
-      }
-      
-      // Якщо успішно отримали базові дані, додаємо зв'язані об'єкти
-      const extendedData = { ...basicData };
-      
-      if (basicData.faculty_id) {
-        const { data: facultyData } = await supabase
-          .from('faculties')
-          .select('*')
-          .eq('id', basicData.faculty_id)
-          .single();
-          
-        extendedData.faculty = facultyData || null;
-      }
-      
-      if (basicData.department_id) {
-        const { data: deptData } = await supabase
-          .from('departments')
-          .select('*')
-          .eq('id', basicData.department_id)
-          .single();
-          
-        extendedData.department = deptData || null;
-      }
-      
-      if (basicData.group_id) {
-        const { data: groupData } = await supabase
-          .from('student_groups')
-          .select('*')
-          .eq('id', basicData.group_id)
-          .single();
-          
-        extendedData.group = groupData || null;
-      }
-      
-      return extendedData;
-    } catch (error) {
-      console.error("Помилка отримання розширених ролей:", error);
-      return null;
+    console.log("Розширені ролі тимчасово відключено");
+    
+    // Отримуємо роль користувача для визначення, чи є він адміном
+    const user = await this.getUserById(userId);
+    
+    if (user?.role === 'admin') {
+      // Для адміна повертаємо базові розширені ролі
+      return {
+        is_curator: false,
+        is_dean: false,
+        is_vice_dean: false,
+        is_group_leader: false
+      };
     }
+    
+    // Для інших ролей повертаємо null
+    return null;
   },
-
+  
   // Призначення додаткової ролі користувачу
   async assignUserRole(userId, roleData) {
     // Спочатку перевіряємо, чи вже існує запис для цього користувача

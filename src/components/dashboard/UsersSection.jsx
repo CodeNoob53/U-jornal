@@ -4,6 +4,7 @@ import { DataService } from '../../services/DataService';
 import { LoadingIndicator } from '../common/LoadingIndicator';
 import { ErrorAlert } from '../common/ErrorAlert';
 import { UserModal } from '../common/UserModal';
+import { UserEditModal } from '../common/UserEditModal';
 import { StudentGroupModal } from '../common/StudentGroupModal'; // <-- added import
 import { supabase } from '../../lib/supabase';
 
@@ -16,6 +17,8 @@ export function UsersSection() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);           // <-- new state
   const [isStudentGroupModalOpen, setIsStudentGroupModalOpen] = useState(false); // <-- new state
+  const [selectedUserForEdit, setSelectedUserForEdit] = useState(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   // Завантаження користувачів при першому рендері
   const fetchUsers = async () => {
@@ -94,6 +97,25 @@ export function UsersSection() {
   // Функція для закриття модального вікна групи студента
   const handleCloseStudentGroupModal = () => {
     setIsStudentGroupModalOpen(false);
+  };
+
+  // Додаємо обробник редагування користувача
+  const handleEditUser = (user) => {
+    setSelectedUserForEdit(user);
+    setIsEditModalOpen(true);
+  };
+
+  // Додаємо обробник закриття модального вікна
+  const handleCloseEditModal = () => {
+    setIsEditModalOpen(false);
+    setSelectedUserForEdit(null);
+  };
+
+  // Додаємо обробник збереження змін
+  const handleUserUpdated = async () => {
+    await fetchUsers();
+    setIsEditModalOpen(false);
+    setSelectedUserForEdit(null);
   };
 
   if (loading && users.length === 0) return <LoadingIndicator />;
@@ -182,7 +204,10 @@ export function UsersSection() {
                         </div>
                       ) : (
                         <>
-                          <button className="text-indigo-600 hover:text-indigo-900 mr-4 flex items-center">
+                          <button 
+                            onClick={() => handleEditUser(user)}
+                            className="text-indigo-600 hover:text-indigo-900 mr-4 flex items-center"
+                          >
                             <Edit className="w-4 h-4 mr-1" />
                             Редагувати
                           </button>
@@ -233,6 +258,16 @@ export function UsersSection() {
           onClose={handleCloseStudentGroupModal} 
           studentId={selectedStudent.id}
           studentName={selectedStudent.full_name}
+        />
+      )}
+
+      {/* Модальне вікно для редагування користувача */}
+      {selectedUserForEdit && (
+        <UserEditModal 
+          isOpen={isEditModalOpen}
+          onClose={handleCloseEditModal}
+          onUserUpdated={handleUserUpdated}
+          user={selectedUserForEdit}
         />
       )}
     </div>
